@@ -83,7 +83,7 @@ var myRequestApp = function (eachUrlObj, done) {
         body: json
       };
 
-      versionUrlsResponses.push(myresponse);
+      appResponses.push(myresponse);
         
       done();
     });
@@ -121,7 +121,7 @@ var myRequestAppVersions = function (eachUrlObj, done) {
           body: json
         };
   
-        appResponses.push(myresponse);
+        versionUrlsResponses.push(myresponse);
           
         done();
       });
