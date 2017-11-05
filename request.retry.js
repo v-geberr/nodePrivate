@@ -6,7 +6,6 @@ var path = require("path");
 var assert = require("assert");
 var _ = require("underscore");
 
-var appIds = [];
 var appResponses = [];
 var versionUrls  = [];
 var versionUrlsResponses  = [];
