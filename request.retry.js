@@ -48,7 +48,7 @@ var myAppList = function(cb) {
 
           console.log("app " + app.name);
 
-          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: app.id,url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id)});
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "appInfo",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id)});
           urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "versions",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/versions?take=500")});
           urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "settings",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/settings")});
           urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "endpoints",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/endpoints")});
@@ -88,11 +88,9 @@ var myRequestApp = function (eachUrlObj, done) {
       let route = response.request.href.substr(response.request.href.lastIndexOf('/') + 1).replace('?take=500','');
 
       let myresponse = {
-        "Ocp-Apim-Subscription-Key":eachUrlObj["Ocp-Apim-Subscription-Key"],
         appId: eachUrlObj.appId,
         route: route,
         name: eachUrlObj.name,
-        appId: eachUrlObj.appId,
         url: response.request.href, 
         status: response.statusCode, 
         body: json
@@ -100,7 +98,10 @@ var myRequestApp = function (eachUrlObj, done) {
 
       appResponses.push(myresponse);
       
-      eachUrlObj[route] = {request: requestOptions, response: myresponse, status: response.statusCode};
+      eachUrlObj[route] = {
+        //request: requestOptions, 
+        response: myresponse, 
+        status: response.statusCode};
 
       done();
     });
@@ -132,7 +133,6 @@ var myRequestAppVersions = function (eachUrlObj, done) {
         let route = response.request.href.substr(response.request.href.lastIndexOf('/') + 1).replace('?take=500','');
   
         let myresponse = {
-          "Ocp-Apim-Subscription-Key":programmaticKey,
           appId: eachUrlObj.appId,
           route: route,
           name: json.name,
@@ -143,7 +143,7 @@ var myRequestAppVersions = function (eachUrlObj, done) {
   
         versionUrlsResponses.push(myresponse);
 
-        eachUrlObj.requestOptions = requestOptions;
+        //eachUrlObj.requestOptions = requestOptions;
         eachUrlObj.response = json;
         eachUrlObj.responseStatus = response.statusCode;
         done();
@@ -184,20 +184,35 @@ var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
 }
 
 var fixAppList = (appList, children) => {
-  children.forEach(child => {
-    thisChildsAppMatches = appList.filter(x => x.id === child.appId);
-    if(thisChildsAppMatches && thisChildsAppMatches.length==1) thisChildsAppMatches[0][child.route] = child;
+
+  appList.forEach(app => {
+    var properties = children.filter(x => x.appId === app.id);
+    var bodies = properties.map(x => {
+      let info = {};
+      if (x.route === "appInfo"){
+        info = { route: "appInfo", values: x[x.appId].response.body};
+      } else {
+        info = { route: x.route, values: x[x.route].response.body};
+      }
+      return info;
+    });
+    app.properties = bodies;
   });
 }
 
-var fixVersionList = (appList, versions) => {
-  versions.forEach(version => {
-    thisChildsAppMatches = appList.filter(app => app.id === version.id);
-    if(thisChildsAppMatches && thisChildsAppMatches.length==1) thisChildsAppMatches[0].versions[version.version] = version.info;
+var fixVersionList = (appList, children) => {
+  appList.forEach(app => {
+    var versionsList = children.filter(x => x.id === app.id);
+    var bodies = versionsList.map(x => x.response );
+    app.properties.push({ route: "versionExports", values: bodies});
   });
+
 }
 
 myAppList((appUrls) => {
+
+
+  appUrls.programmaticKey = programmaticKey;
 
   assert(appUrls.apps.length===5);
   assert(appUrls.urls.length===20);
@@ -205,12 +220,6 @@ myAppList((appUrls) => {
   async.eachSeries(appUrls.urls, myRequestApp, (response) => {
 
     assert(appResponses.length===20);
-
-    // put each route under each app
-    // app
-    // app.settings
-    // app.endpoint
-    // app.versions
     var appChildrenRoutes = JSON.parse(JSON.stringify(appUrls.urls));
     delete appUrls.urls;
     fixAppList(appUrls.apps, appChildrenRoutes);
