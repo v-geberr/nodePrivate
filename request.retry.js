@@ -199,9 +199,13 @@ myAppList((appUrls) => {
 
     assert(appResponses.length===20);
 
-    var appChildrenRoutes = appUrls.urls;
+    // put each route under each app
+    // app
+    // app.settings
+    // app.endpoint
+    // app.versions
+    var appChildrenRoutes = JSON.parse(JSON.stringify(appUrls.urls));
     delete appUrls.urls;
-
     fixAppList(appUrls.apps, appChildrenRoutes);
 
     appResponses.forEach(appResponse => {
