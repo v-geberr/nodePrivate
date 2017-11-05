@@ -150,13 +150,10 @@ let getVersionUrls = (progKey, appName, appId, versionList) => {
   });
 }
 
-let getVersionInfos = (appUrls, versionUrls) => {
+let getVersionInfos = (appUrls, versionUrls,done) => {
 
-    //console.log("about to query versions");
     async.eachSeries(versionUrls, myRequestAppVersions, (versionsResponse) => {
-      
-      writeAllToFiles(appUrls,versionUrls,versionsResponse);
-
+      done(versionsResponse);
     });
 }
 
@@ -165,17 +162,15 @@ var writeMyFilePromise = function(fileName,data){
   return fs.writeFile(fileName,JSON.stringify(data),"utf-8");
 }
 var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
-  writeMyFilePromise(path.join(__dirname,"app.json"), appUrls)
-  .then( () => {
-    return writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
-  }).then( () => {
-    return writeMyFilePromise(path.join(__dirname,"versions.json"), versionUrls);
-  }).then( () => {
-    return writeMyFilePromise(path.join(__dirname,"versionResponses.json"), versionUrlsResponses);
-  }).then( () => {
-    console.log("done");
+
+  var promise1 = writeMyFilePromise(path.join(__dirname,"app.json"), appUrls);
+  var promise2 = writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
+  var promise3 = writeMyFilePromise(path.join(__dirname,"versions.json"), versionUrls);
+  
+  return Promise.all([promise1,promise2,promise3]).then( () => {
+    return;
   }).catch( (err) => {
-    console.log(err);
+    throw(err);
   });
 }
 myAppList((appUrls) => {
@@ -195,7 +190,14 @@ myAppList((appUrls) => {
     }); 
 
     assert(versionUrls.length===7);
-    getVersionInfos(appUrls, versionUrls);
+    getVersionInfos(appUrls, versionUrls,(versionsResponse)=>{
+
+      writeAllToFiles(appUrls,versionUrls,versionsResponse)
+      .then(() => {
+        console.log("done");
+      }).catch(err => {console.log(err);});
+      
+    });
 
   });
 });
