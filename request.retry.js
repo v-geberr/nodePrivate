@@ -148,18 +148,7 @@ let getVersionInfos = (appUrls, versionUrls) => {
     //console.log("about to query versions");
     async.eachSeries(versionUrls, myRequestAppVersions, (versionsResponse) => {
       
-      writeMyFilePromise(path.join(__dirname,"app.json"), appUrls)
-      .then( () => {
-        return writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
-      }).then( () => {
-        return writeMyFilePromise(path.join(__dirname,"versions.json"), versionUrls);
-      }).then( () => {
-        return writeMyFilePromise(path.join(__dirname,"versionResponses.json"), versionUrlsResponses);
-      }).then( () => {
-        console.log("done");
-      }).catch( (err) => {
-        console.log(err);
-      });
+      writeAllToFiles(appUrls,versionUrls,versionsResponse);
 
     });
 }
@@ -168,24 +157,28 @@ let getVersionInfos = (appUrls, versionUrls) => {
 var writeMyFilePromise = function(fileName,data){
   return fs.writeFile(fileName,JSON.stringify(data),"utf-8");
 }
-
+var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
+  writeMyFilePromise(path.join(__dirname,"app.json"), appUrls)
+  .then( () => {
+    return writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
+  }).then( () => {
+    return writeMyFilePromise(path.join(__dirname,"versions.json"), versionUrls);
+  }).then( () => {
+    return writeMyFilePromise(path.join(__dirname,"versionResponses.json"), versionUrlsResponses);
+  }).then( () => {
+    console.log("done");
+  }).catch( (err) => {
+    console.log(err);
+  });
+}
 myAppList((appUrls) => {
 
-  // apps
   async.eachSeries(appUrls.urls, myRequestApp, (response) => {
 
-    // each app
     appResponses.forEach(appResponse => {
 
       if (appResponse.route.indexOf("versions")!= -1){
-
         getVersionUrls(programmaticKey, appResponse.appId,appResponse.body)
-        // add version urls 
-        //appResponse.body.forEach(version => {
-
-          // each version url
-          //versionUrls.push({applicationId: appResponse.appId, version:version.version,info:JSON.parse(JSON.stringify(version)), url: //`https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/${appResponse.appId}/versions/${version.version}/export`, //"Ocp-Apim-Subscription-Key":programmaticKey});
-        //});
       }
     }); 
 
