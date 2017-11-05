@@ -204,8 +204,6 @@ myAppList((appUrls) => {
 
     fixAppList(appUrls.apps, appChildrenRoutes);
 
-    process.exit();
-
     appResponses.forEach(appResponse => {
 
       if (appResponse.route.indexOf("versions")!= -1){
