@@ -12,13 +12,14 @@ var versionUrlsResponses  = [];
 
 var programmaticKey = "fb3488ba06614b4985c1baa7a0af0376";
 
+var retryStrategy = function (err, response, body){
+  let shouldRetry = err || (response.statusCode === 429);
+  return shouldRetry;
+}
 
 var myAppList = function(cb) {
 
-  var retryStrategy = function (err, response, body){
-    let shouldRetry = err || (response.statusCode === 429);
-    return shouldRetry;
-  }
+
 
   let requestOptions = {
     method:"GET",
@@ -56,15 +57,18 @@ var myAppList = function(cb) {
 let appInfos = [];
 
 var myRequestApp = function (eachUrlObj, done) {
-  var now = new moment();
-  console.log("request " + now.format("HH:mm:ss"));
+
+  console.log("request " + new moment().format("HH:mm:ss"));
   setTimeout(function () {
     let requestOptions = {
       method:"GET",
       url: eachUrlObj.url,
       headers: {
         "Ocp-Apim-Subscription-Key":programmaticKey
-      }
+      },
+      maxAttempts: 5,   
+      retryDelay: 500, 
+      retryStrategy:  retryStrategy
     };
     request(requestOptions, function(error, response, body) { 
 
@@ -140,19 +144,32 @@ myAppList( (appUrls) => {
   // apps
   async.eachSeries(appUrls.urls, myRequestApp, (response) => {
 
+    console.log("first eachSeries returning");
+
     // each app
     appResponses.forEach(appResponse => {
+
+      console.log("appResponses.forEach returning");
+
       if (appResponse.route.indexOf("versions")!= -1){
 
         // add version urls 
         appResponse.body.forEach(version => {
+
+          console.log("appResponse.body.forEach returning");
+
           // each version url
           versionUrls.push({applicationId: appResponse.appId, version:version.version,info:JSON.parse(JSON.stringify(version)), url: `https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/${appResponse.appId}/versions/${version.version}/export`, "Ocp-Apim-Subscription-Key":programmaticKey});
         });
       }
     }); 
+
+    console.log("version urls found");
+
     //console.log("about to query versions");
     async.eachSeries(versionUrls, myRequestAppVersions, (versionsResponse) => {
+
+      console.log("second async returning");
 
       writeMyFilePromise(path.join(__dirname,"app.json"), appUrls)
       .then( () => {
