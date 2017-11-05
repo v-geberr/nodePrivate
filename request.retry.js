@@ -170,12 +170,10 @@ let getVersionInfos = (appUrls, versionUrls,done) => {
 var writeMyFilePromise = function(fileName,data){
   return fs.writeFile(fileName,JSON.stringify(data),"utf-8");
 }
-var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
+var writeAllToFiles = (appUrls) => {
 
   var promise1 = writeMyFilePromise(path.join(__dirname,"app.json"), appUrls);
-  //var promise2 = writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
-  //var promise3 = writeMyFilePromise(path.join(__dirname,"versions.export.json"), versionUrls);
-  
+ 
   return Promise.all([promise1]).then( () => {
     return;
   }).catch( (err) => {
@@ -236,7 +234,7 @@ myAppList((appUrls) => {
 
       fixVersionList(appUrls.apps, versionUrls);
 
-      writeAllToFiles(appUrls,versionUrls,versionsResponse)
+      writeAllToFiles(appUrls)
       .then(() => {
         console.log("done");
       }).catch(err => {console.log(err);});
