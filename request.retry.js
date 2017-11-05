@@ -132,31 +132,44 @@ var myRequestAppVersions = function (eachUrlObj, done) {
     }, 500);
   }
 
+let getVersionInfos = (appUrls, versionUrls) => {
+
+    //console.log("about to query versions");
+    async.eachSeries(versionUrls, myRequestAppVersions, (versionsResponse) => {
+      
+            writeMyFilePromise(path.join(__dirname,"app.json"), appUrls)
+            .then( () => {
+              return writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
+            }).then( () => {
+              return writeMyFilePromise(path.join(__dirname,"versions.json"), versionUrls);
+            }).then( () => {
+              return writeMyFilePromise(path.join(__dirname,"versionResponses.json"), versionUrlsResponses);
+            }).then( () => {
+              console.log("done");
+            }).catch( (err) => {
+              console.log(err);
+            });
+      
+          });
+}
 
 
 var writeMyFilePromise = function(fileName,data){
-  console.log("about to write " + fileName);
   return fs.writeFile(fileName,JSON.stringify(data),"utf-8");
 }
 
-myAppList( (appUrls) => {
+myAppList((appUrls) => {
 
   // apps
   async.eachSeries(appUrls.urls, myRequestApp, (response) => {
 
-    console.log("first eachSeries returning");
-
     // each app
     appResponses.forEach(appResponse => {
-
-      console.log("appResponses.forEach returning");
 
       if (appResponse.route.indexOf("versions")!= -1){
 
         // add version urls 
         appResponse.body.forEach(version => {
-
-          console.log("appResponse.body.forEach returning");
 
           // each version url
           versionUrls.push({applicationId: appResponse.appId, version:version.version,info:JSON.parse(JSON.stringify(version)), url: `https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/${appResponse.appId}/versions/${version.version}/export`, "Ocp-Apim-Subscription-Key":programmaticKey});
@@ -165,26 +178,8 @@ myAppList( (appUrls) => {
     }); 
 
     console.log("version urls found");
+    getVersionInfos(appUrls, versionUrls);
 
-    //console.log("about to query versions");
-    async.eachSeries(versionUrls, myRequestAppVersions, (versionsResponse) => {
-
-      console.log("second async returning");
-
-      writeMyFilePromise(path.join(__dirname,"app.json"), appUrls)
-      .then( () => {
-        return writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
-      }).then( () => {
-        return writeMyFilePromise(path.join(__dirname,"versions.json"), versionUrls);
-      }).then( () => {
-        return writeMyFilePromise(path.join(__dirname,"versionResponses.json"), versionUrlsResponses);
-      }).then( () => {
-        console.log("done");
-      }).catch( (err) => {
-        console.log(err);
-      });
-
-    });
   });
 });
 
