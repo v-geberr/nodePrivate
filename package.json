@@ -16,6 +16,7 @@
     "mocha": "^4.0.1",
     "moment": "^2.19.1",
     "request": "^2.83.0",
-    "requestretry": "^1.12.2"
+    "requestretry": "^1.12.2",
+    "underscore": "^1.8.3"
   }
 }

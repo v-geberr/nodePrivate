@@ -4,7 +4,7 @@ var fs = require('fs-extra');
 var moment = require('moment');
 var path = require("path");
 var assert = require("assert");
-
+var _ = require("underscore");
 
 var appIds = [];
 var appResponses = [];
@@ -182,6 +182,14 @@ var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
     throw(err);
   });
 }
+
+var fixAppList = (appList, children) => {
+  children.forEach(child => {
+    thisChildsAppMatches = appList.filter(x => x.id === child.appId);
+    if(thisChildsAppMatches && thisChildsAppMatches.length==1) thisChildsAppMatches[0][child.route] = child;
+  });
+}
+
 myAppList((appUrls) => {
 
   assert(appUrls.apps.length===5);
@@ -190,6 +198,13 @@ myAppList((appUrls) => {
   async.eachSeries(appUrls.urls, myRequestApp, (response) => {
 
     assert(appResponses.length===20);
+
+    var appChildrenRoutes = appUrls.urls;
+    delete appUrls.urls;
+
+    fixAppList(appUrls.apps, appChildrenRoutes);
+
+    process.exit();
 
     appResponses.forEach(appResponse => {
 
