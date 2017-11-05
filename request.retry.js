@@ -173,10 +173,10 @@ var writeMyFilePromise = function(fileName,data){
 var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
 
   var promise1 = writeMyFilePromise(path.join(__dirname,"app.json"), appUrls);
-  var promise2 = writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
-  var promise3 = writeMyFilePromise(path.join(__dirname,"versions.export.json"), versionUrls);
+  //var promise2 = writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
+  //var promise3 = writeMyFilePromise(path.join(__dirname,"versions.export.json"), versionUrls);
   
-  return Promise.all([promise1,promise2,promise3]).then( () => {
+  return Promise.all([promise1]).then( () => {
     return;
   }).catch( (err) => {
     throw(err);
@@ -193,7 +193,7 @@ var fixAppList = (appList, children) => {
 var fixVersionList = (appList, versions) => {
   versions.forEach(version => {
     thisChildsAppMatches = appList.filter(app => app.id === version.id);
-    if(thisChildsAppMatches && thisChildsAppMatches.length==1) thisChildsAppMatches[0].versions[version.version] = version;
+    if(thisChildsAppMatches && thisChildsAppMatches.length==1) thisChildsAppMatches[0].versions[version.version] = version.info;
   });
 }
 
