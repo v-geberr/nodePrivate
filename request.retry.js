@@ -190,6 +190,13 @@ var fixAppList = (appList, children) => {
   });
 }
 
+var fixVersionList = (appList, versions) => {
+  versions.forEach(version => {
+    thisChildsAppMatches = appList.filter(app => app.id === version.id);
+    if(thisChildsAppMatches && thisChildsAppMatches.length==1) thisChildsAppMatches[0].versions[version.version] = version;
+  });
+}
+
 myAppList((appUrls) => {
 
   assert(appUrls.apps.length===5);
@@ -217,6 +224,8 @@ myAppList((appUrls) => {
 
     assert(versionUrls.length===7);
     getVersionInfos(appUrls, versionUrls,(versionsResponse)=>{
+
+      fixVersionList(appUrls.apps, versionUrls);
 
       writeAllToFiles(appUrls,versionUrls,versionsResponse)
       .then(() => {
