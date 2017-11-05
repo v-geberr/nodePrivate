@@ -45,15 +45,19 @@ var myAppList = function(cb) {
         //  appIds.push({id: x.id, name: x.name};
         //});
         appList.forEach(app => {
-          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "app",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id)});
-          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_versions",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/versions?take=500")});
-          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_settings",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/settings")});
-          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_endpoints",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/endpoints")});
+
+          console.log("app " + app.name);
+
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: app.id,url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id)});
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "versions",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/versions?take=500")});
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "settings",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/settings")});
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "endpoints",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/endpoints")});
+        
+     
         });
-        appList.urls = urls;
       }
     }
-    cb(appList);
+    cb({apps:appList, urls: urls});
   });
 }
 
@@ -61,7 +65,7 @@ let appInfos = [];
 
 var myRequestApp = function (eachUrlObj, done) {
 
-  console.log("request " + new moment().format("HH:mm:ss"));
+  console.log("request app " + eachUrlObj.url + ' ' + new moment().format("HH:mm:ss"));
   setTimeout(function () {
     let requestOptions = {
       method:"GET",
@@ -75,10 +79,13 @@ var myRequestApp = function (eachUrlObj, done) {
     };
     request(requestOptions, function(error, response, body) { 
 
-      console.log("response " + response.request.href + " " + response.statusCode);
+      if(error){
+        console.log("request err " + eachUrlObj.url);
+      }
+      console.log("response app " + response.request.href + " " + response.statusCode);
 
       let json = JSON.parse(body);
-      let route = response.request.href.substr(response.request.href.lastIndexOf('/') + 1);
+      let route = response.request.href.substr(response.request.href.lastIndexOf('/') + 1).replace('?take=500','');
 
       let myresponse = {
         "Ocp-Apim-Subscription-Key":eachUrlObj["Ocp-Apim-Subscription-Key"],
@@ -92,7 +99,9 @@ var myRequestApp = function (eachUrlObj, done) {
       };
 
       appResponses.push(myresponse);
-        
+      
+      eachUrlObj[route] = {request: requestOptions, response: myresponse, status: response.statusCode};
+
       done();
     });
   }, 500);
@@ -102,7 +111,7 @@ var myRequestApp = function (eachUrlObj, done) {
 var myRequestAppVersions = function (eachUrlObj, done) {
 
 
-    console.log("request " + new moment().format("HH:mm:ss"));
+  console.log("request version " + eachUrlObj.version + ' ' + new moment().format("HH:mm:ss"));
 
     setTimeout(function () {
       let requestOptions = {
@@ -117,10 +126,10 @@ var myRequestAppVersions = function (eachUrlObj, done) {
       };
       request(requestOptions, function(error, response, body) { 
   
-        console.log("response " + response.request.href + " " + response.statusCode);
+        console.log("response version " + response.request.href + " " + response.statusCode);
   
         let json = JSON.parse(body);
-        let route = response.request.href.substr(response.request.href.lastIndexOf('/') + 1);
+        let route = response.request.href.substr(response.request.href.lastIndexOf('/') + 1).replace('?take=500','');
   
         let myresponse = {
           "Ocp-Apim-Subscription-Key":programmaticKey,
@@ -165,7 +174,7 @@ var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
 
   var promise1 = writeMyFilePromise(path.join(__dirname,"app.json"), appUrls);
   var promise2 = writeMyFilePromise(path.join(__dirname,"appResponses.json"), appResponses);
-  var promise3 = writeMyFilePromise(path.join(__dirname,"versions.json"), versionUrls);
+  var promise3 = writeMyFilePromise(path.join(__dirname,"versions.export.json"), versionUrls);
   
   return Promise.all([promise1,promise2,promise3]).then( () => {
     return;
@@ -175,7 +184,7 @@ var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
 }
 myAppList((appUrls) => {
 
-  assert(appUrls.length===5);
+  assert(appUrls.apps.length===5);
   assert(appUrls.urls.length===20);
 
   async.eachSeries(appUrls.urls, myRequestApp, (response) => {
