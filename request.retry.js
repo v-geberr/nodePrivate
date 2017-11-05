@@ -3,6 +3,7 @@ var async = require('async');
 var fs = require('fs-extra');
 var moment = require('moment');
 var path = require("path");
+var assert = require("assert");
 
 
 var appIds = [];
@@ -33,24 +34,26 @@ var myAppList = function(cb) {
   };
 
   request(requestOptions, function(err, response, body){
-    let json = JSON.parse(response.body);
+    let appList = JSON.parse(response.body);
     // this callback will only be called when the request succeeded or after maxAttempts or on error 
     if (response && response.statusCode === 200){
       
-      if(Array.isArray(json) && json[0].hasOwnProperty('id')) {
+      if(Array.isArray(appList) && appList[0].hasOwnProperty('id')) {
       //console.log('The number of request attempts: ' + response.attempts);
         var urls = [];
-        appIds = json.map(x => x.id);
-        appIds.forEach(id => {
-          urls.push({appId:id,url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + id), "Ocp-Apim-Subscription-Key":programmaticKey, route: "app"});
-          urls.push({appId:id,url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + id + "/versions?take=500"), "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_versions"});
-          urls.push({appId:id,url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + id + "/settings"), "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_settings"});
-          urls.push({appId:id,url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + id + "/endpoints"), "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_endpoints"});
+        //appIds = json.map(x => {
+        //  appIds.push({id: x.id, name: x.name};
+        //});
+        appList.forEach(app => {
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "app",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id)});
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_versions",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/versions?take=500")});
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_settings",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/settings")});
+          urls.push({name: app.name,appId:app.id, "Ocp-Apim-Subscription-Key":programmaticKey, route: "app_endpoints",url: ("https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/" + app.id + "/endpoints")});
         });
-        json.urls = urls;
+        appList.urls = urls;
       }
     }
-    cb(json);
+    cb(appList);
   });
 }
 
@@ -78,10 +81,11 @@ var myRequestApp = function (eachUrlObj, done) {
       let route = response.request.href.substr(response.request.href.lastIndexOf('/') + 1);
 
       let myresponse = {
-        "Ocp-Apim-Subscription-Key":programmaticKey,
+        "Ocp-Apim-Subscription-Key":eachUrlObj["Ocp-Apim-Subscription-Key"],
         appId: eachUrlObj.appId,
         route: route,
-        name: json.name,
+        name: eachUrlObj.name,
+        appId: eachUrlObj.appId,
         url: response.request.href, 
         status: response.statusCode, 
         body: json
@@ -105,7 +109,7 @@ var myRequestAppVersions = function (eachUrlObj, done) {
         method:"GET",
         url: eachUrlObj.url,
         headers: {
-          "Ocp-Apim-Subscription-Key":programmaticKey
+          "Ocp-Apim-Subscription-Key":eachUrlObj["Ocp-Apim-Subscription-Key"]
         },
         maxAttempts: 5,   
         retryDelay: 500, 
@@ -129,17 +133,20 @@ var myRequestAppVersions = function (eachUrlObj, done) {
         };
   
         versionUrlsResponses.push(myresponse);
-          
+
+        eachUrlObj.requestOptions = requestOptions;
+        eachUrlObj.response = json;
+        eachUrlObj.responseStatus = response.statusCode;
         done();
       });
     }, 500);
   }
 
-let getVersionUrls = (progKey, appId, versionList) => {
+let getVersionUrls = (progKey, appName, appId, versionList) => {
   versionList.forEach(version => {
     
     // each version url
-    versionUrls.push({applicationId: appId, version:version.version,info:JSON.parse(JSON.stringify(version)), url: `https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/${appId}/versions/${version.version}/export`, "Ocp-Apim-Subscription-Key":programmaticKey});
+    versionUrls.push({"Ocp-Apim-Subscription-Key":programmaticKey,name: appName, id: appId, version:version.version,info:JSON.parse(JSON.stringify(version)), url: `https://westus.api.cognitive.microsoft.com/luis/api/v2.0/apps/${appId}/versions/${version.version}/export`});
   });
 }
 
@@ -173,15 +180,21 @@ var writeAllToFiles = (appUrls,versionUrls,versionsResponse) => {
 }
 myAppList((appUrls) => {
 
+  assert(appUrls.length===5);
+  assert(appUrls.urls.length===20);
+
   async.eachSeries(appUrls.urls, myRequestApp, (response) => {
+
+    assert(appResponses.length===20);
 
     appResponses.forEach(appResponse => {
 
       if (appResponse.route.indexOf("versions")!= -1){
-        getVersionUrls(programmaticKey, appResponse.appId,appResponse.body)
+        getVersionUrls(programmaticKey, appResponse.name, appResponse.appId,appResponse.body)
       }
     }); 
 
+    assert(versionUrls.length===7);
     getVersionInfos(appUrls, versionUrls);
 
   });
